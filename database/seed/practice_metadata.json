@@ -1,0 +1,5 @@
+{
+  "platforms": ["CSES", "Codeforces"],
+  "difficulty_range": [800, 1600],
+  "topics": ["arrays", "graphs", "dynamic programming", "strings", "math", "implementation"]
+}

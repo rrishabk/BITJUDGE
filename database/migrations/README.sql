@@ -1,0 +1,2 @@
+-- Placeholder migration file.
+-- Replace with Alembic-generated migrations before production rollout.
