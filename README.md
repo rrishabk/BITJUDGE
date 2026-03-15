@@ -1,4 +1,4 @@
-# BITJUDGE
+# BITJUDGE by rrishabk
 
 Production-oriented monorepo scaffold for a coding platform powered by BITWISE.
 
