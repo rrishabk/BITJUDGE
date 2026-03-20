@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { practiceProblems as initialProblems } from "@/lib/mock-data";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "/api/v1";
 
 type PracticeProblem = {
   id?: number;
@@ -63,7 +63,7 @@ export default function PracticePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ problem_id: problemId }),
+        body: JSON.stringify({ problem_id: problemId, solved }),
       });
     } catch {
       // Keep optimistic UI for scaffold mode when backend is unavailable.

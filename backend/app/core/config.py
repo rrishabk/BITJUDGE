@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic import Field
@@ -25,10 +26,11 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 1800
 
-    redis_url: str = "redis://redis:6379/0"
+    redis_url: str | None = "redis://redis:6379/0"
     redis_max_connections: int = 200
     judge0_url: str = "http://judge0:2358"
     judge0_api_key: str | None = None
+    enable_codeforces_scheduler: bool = True
 
     allowed_email_domain: str = "juetguna.in"
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
@@ -53,3 +55,7 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+
+def is_running_on_vercel() -> bool:
+    return bool(os.getenv("VERCEL") or os.getenv("VERCEL_ENV"))

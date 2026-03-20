@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
-from app.core.config import settings
+from app.core.config import is_running_on_vercel, settings
 from app.db.session import close_redis, init_redis
 from app.services.codeforces_sync import start_codeforces_scheduler, stop_codeforces_scheduler
 from app.services.rate_limit import RateLimitMiddleware
@@ -13,10 +13,18 @@ from app.services.rate_limit import RateLimitMiddleware
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await init_redis()
-    start_codeforces_scheduler()
-    yield
-    await stop_codeforces_scheduler()
-    await close_redis()
+
+    scheduler_started = False
+    if settings.enable_codeforces_scheduler and not is_running_on_vercel():
+        start_codeforces_scheduler()
+        scheduler_started = True
+
+    try:
+        yield
+    finally:
+        if scheduler_started:
+            await stop_codeforces_scheduler()
+        await close_redis()
 
 
 app = FastAPI(title="BITJUDGE API", version="1.0.0", lifespan=lifespan)

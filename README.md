@@ -1,188 +1,210 @@
 # BITJUDGE
 
-Production-oriented monorepo scaffold for a coding platform powered by BITWISE.
+BITJUDGE is a monorepo with a Next.js frontend and a FastAPI backend.
 
 ## Stack
-- Frontend: Next.js 14, React, TailwindCSS, Shadcn-style UI primitives, Recharts
-- Backend: FastAPI, PostgreSQL, Redis, Judge0
-- Auth: JWT with `@juetguna.in` email restriction
+- Frontend: Next.js 14, React, Tailwind CSS
+- Backend: FastAPI, SQLAlchemy, PostgreSQL, Redis
+- Auth: JWT
+- Judge: Judge0
 
-## Services
-- `frontend/`: app router frontend with student, quiz, practice, and admin dashboards
-- `backend/`: async FastAPI API with JWT auth, quiz management, practice tracking, and Judge0 submission flow
-- `database/seed/`: starter practice-problem dataset for CSES and Codeforces 800-1600
-- `infra/`: Docker Compose and Nginx reverse proxy
+## Repository Layout
+- `frontend/`: Next.js app
+- `backend/`: FastAPI API
+- `database/`: SQL schema and seed files
+- `infra/`: local Docker Compose setup
 
-## Local Run
-1. Copy `backend/.env.example` to `backend/.env` and change secrets.
-2. Install frontend dependencies in `frontend/` and backend dependencies in `backend/`.
-3. Start infrastructure with `docker compose -f infra/docker-compose.yml up --build`.
-4. Open `http://localhost`.
+## Vercel Deployment Model
+Deploy this repo as **two separate Vercel projects**:
 
-## Notes
-- The frontend currently uses mock dashboard data for visual scaffolding.
-- The backend models and endpoints are ready to be connected to real frontend API calls.
-- Replace the placeholder migration process with Alembic revisions before deployment.
-# Stack
+1. `bitjudge-backend`
+   Root Directory: `backend`
+2. `bitjudge-frontend`
+   Root Directory: `frontend`
 
-- `frontend`: Next.js app for authentication, problem browsing, code submission, and result views
-- `backend`: FastAPI service for auth, problem APIs, submissions, and judge orchestration
-- `database`: PostgreSQL for users, problems, contests, submissions, and verdict history
-- `redis`: short-lived session cache, rate limiting, queue metadata, and hot leaderboard data
-- `judge-service`: Judge0 API for code execution and verdict generation
+This is the correct setup for this codebase. The frontend runs on Vercel as a Next.js app, and the backend runs on Vercel as Python serverless functions.
 
-## Suggested Repository Layout
+## Important Constraint
+Vercel can host your frontend and FastAPI backend, but it does **not** replace your infrastructure services.
+You still need:
 
-```text
-BITJUDGE/
-├── frontend/                 # Next.js
-│   ├── app/
-│   ├── components/
-│   ├── lib/
-│   ├── public/
-│   └── package.json
-├── backend/                  # FastAPI
-│   ├── app/
-│   │   ├── api/
-│   │   ├── core/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   └── main.py
-│   ├── tests/
-│   └── requirements.txt
-├── database/
-│   ├── migrations/
-│   └── seed/
-├── infra/
-│   ├── docker-compose.yml
-│   ├── nginx/
-│   └── env/
-└── read.md
-```
+- PostgreSQL: Neon, Supabase, Railway Postgres, Render Postgres, or Vercel Postgres
+- Redis: Upstash Redis or another hosted Redis
+- Judge0: deploy separately on Railway, Render, VPS, EC2, etc.
 
-## Service Responsibilities
+Judge0 is not a good fit for Vercel serverless.
 
+## Changes Added For Vercel
+- Added `backend/api/index.py` so Vercel can expose the FastAPI app.
+- Added `backend/vercel.json` to route all backend requests to the FastAPI entrypoint.
+- Disabled the background scheduler automatically on Vercel serverless.
+- Made Redis optional so the backend can still boot when Redis is not configured.
+- Switched the frontend practice page to use `/api/v1` by default.
+- Added a frontend rewrite so `/api/*` can proxy to your deployed backend.
+- Added `frontend/.env.example` and updated `backend/.env.example`.
+
+## Local Development
 ### Frontend
-
-- Handles login, registration, and protected routes
-- Shows problems, editor UI, submission history, and contest pages
-- Calls FastAPI over REST or WebSocket for live verdict updates
-
-### Backend
-
-- Validates users and issues auth tokens or session identifiers
-- Stores and fetches problems, test cases, and submissions
-- Sends source code to Judge0 and polls or receives callback results
-- Updates PostgreSQL with verdicts, runtime, memory, and logs
-- Uses Redis for session caching, throttling, and background job state
-
-### PostgreSQL
-
-Main tables:
-
-- `users`
-- `problems`
-- `problem_testcases`
-- `submissions`
-- `submission_results`
-- `contests`
-- `contest_registrations`
-- `leaderboards`
-
-### Redis
-
-Typical uses:
-
-- session store
-- refresh token blacklist
-- submission queue state
-- rate limiting counters
-- cached leaderboard snapshots
-
-### Judge0
-
-- Receives source code, language id, stdin, expected output, and limits
-- Returns compile status, execution status, time, memory, stdout, stderr
-
-## Submission Flow
-
-1. User writes code in the Next.js frontend.
-2. Frontend sends submission payload to FastAPI.
-3. FastAPI stores a `pending` submission row in PostgreSQL.
-4. FastAPI pushes temporary submission state into Redis.
-5. FastAPI sends the job to Judge0.
-6. Judge0 executes code and returns a token/result.
-7. FastAPI resolves the result, updates PostgreSQL, and invalidates Redis state.
-8. Frontend fetches or subscribes to the final verdict.
-
-## Recommended API Surface
-
-### Auth
-
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /auth/logout`
-- `GET /auth/me`
-
-### Problems
-
-- `GET /problems`
-- `GET /problems/{problem_id}`
-- `POST /problems` for admin
-
-### Submissions
-
-- `POST /submissions`
-- `GET /submissions/{submission_id}`
-- `GET /submissions/user/{user_id}`
-
-### Contests
-
-- `GET /contests`
-- `GET /contests/{contest_id}`
-- `GET /contests/{contest_id}/leaderboard`
-
-## Core Environment Variables
+Create `frontend/.env.local`:
 
 ```env
-# frontend
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# backend
-DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/bitjudge
-REDIS_URL=redis://redis:6379/0
-JUDGE0_URL=http://judge0:2358
-JUDGE0_API_KEY=
-SECRET_KEY=
-ACCESS_TOKEN_EXPIRE_MINUTES=60
+BACKEND_URL=http://localhost:8000
 ```
 
-## Initial Build Order
+Then run the frontend from `frontend/`.
 
-1. Create `docker-compose.yml` for PostgreSQL, Redis, backend, and frontend.
-2. Build FastAPI auth and problem APIs first.
-3. Add PostgreSQL models and Alembic migrations.
-4. Integrate Judge0 submission pipeline.
-5. Build Next.js pages for auth, problems, and submissions.
-6. Add leaderboard caching and contest features.
+### Backend
+Create `backend/.env` from `backend/.env.example` and set your local values.
 
-## MVP Features
+## Step-by-Step: Deploy Backend On Vercel
+### 1. Prepare external services
+Create these first:
+- PostgreSQL database
+- Redis instance
+- Judge0 instance
 
-- User authentication
-- Problem listing and detail page
-- Code editor with language selection
-- Run/submit code
-- Verdict, runtime, and memory display
-- Submission history
-- Basic admin problem management
+Keep the connection strings ready.
 
-## Future Extensions
+### 2. Import the repo into Vercel
+In Vercel:
+- Click `Add New -> Project`
+- Import this Git repository
+- Project name: `bitjudge-backend`
+- Set `Root Directory` to `backend`
 
-- contest timers and rank freezing
-- plagiarism detection
-- discussion threads
-- code templates by language
-- rejudge support
-- websocket-based live verdict streaming
+### 3. Backend build settings
+Vercel should detect Python automatically because `backend/api/index.py` exists.
+You usually do not need a custom build command.
+
+### 4. Add backend environment variables
+Set these in the backend Vercel project:
+
+```env
+APP_NAME=BITJUDGE
+ENVIRONMENT=production
+SECRET_KEY=your-long-random-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:PORT/DBNAME
+REDIS_URL=redis://default:PASSWORD@HOST:PORT
+REDIS_MAX_CONNECTIONS=200
+RATE_LIMIT_REQUESTS=120
+RATE_LIMIT_WINDOW_SECONDS=60
+JUDGE0_URL=https://your-judge0-service.example.com
+JUDGE0_API_KEY=
+ENABLE_CODEFORCES_SCHEDULER=false
+CORS_ORIGINS=["https://your-frontend-domain.vercel.app"]
+```
+
+Notes:
+- If you do not want Redis immediately, you can leave `REDIS_URL` empty. Rate limiting and cache become no-op.
+- On Vercel, the scheduler is already skipped automatically. Keeping `ENABLE_CODEFORCES_SCHEDULER=false` is still the safest production setting.
+
+### 5. Deploy the backend
+Deploy the project.
+After deploy, verify:
+
+```text
+https://your-backend-domain.vercel.app/health
+```
+
+It should return:
+
+```json
+{"status":"ok"}
+```
+
+## Step-by-Step: Run Database SQL
+Vercel does not run your SQL migrations automatically.
+Run the SQL files on your hosted Postgres manually in this order:
+
+1. `database/migrations/001_init_schema.sql`
+2. `database/migrations/002_practice_problem_schema.sql`
+3. `database/migrations/003_user_stats.sql`
+4. `database/migrations/004_default_admin_email.sql`
+5. `database/seed/001_practice_problems.sql`
+6. `database/seed/002_default_admin.sql`
+
+Use your Postgres provider SQL editor or `psql`.
+
+## Step-by-Step: Deploy Frontend On Vercel
+### 1. Create the frontend project
+In Vercel:
+- Click `Add New -> Project`
+- Import the same Git repository again
+- Project name: `bitjudge-frontend`
+- Set `Root Directory` to `frontend`
+
+### 2. Add frontend environment variables
+Set this in the frontend Vercel project:
+
+```env
+BACKEND_URL=https://your-backend-domain.vercel.app
+```
+
+Do not add a trailing slash.
+
+What this does:
+- Browser requests go to `/api/...` on the frontend domain.
+- Next.js rewrites those requests to your backend Vercel URL.
+- This avoids browser-side CORS problems for normal app traffic.
+
+### 3. Redeploy frontend after backend URL is known
+If you deploy frontend before the backend URL exists, add `BACKEND_URL` later and redeploy.
+
+## Recommended Deployment Order
+1. Deploy backend project.
+2. Run database migrations and seed data.
+3. Confirm backend `/health` works.
+4. Add backend URL to frontend `BACKEND_URL`.
+5. Deploy frontend project.
+6. Test login, practice page, dashboard, and admin flows.
+
+## Required Vercel Root Directories
+- Backend project root: `backend`
+- Frontend project root: `frontend`
+
+Do not deploy the whole repo as one single Vercel project for this structure.
+
+## Environment Variable Summary
+### Backend
+```env
+APP_NAME=BITJUDGE
+ENVIRONMENT=production
+SECRET_KEY=your-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+DATABASE_URL=postgresql+asyncpg://USER:PASSWORD@HOST:PORT/DBNAME
+REDIS_URL=redis://default:PASSWORD@HOST:PORT
+REDIS_MAX_CONNECTIONS=200
+RATE_LIMIT_REQUESTS=120
+RATE_LIMIT_WINDOW_SECONDS=60
+JUDGE0_URL=https://your-judge0-service.example.com
+JUDGE0_API_KEY=
+ENABLE_CODEFORCES_SCHEDULER=false
+CORS_ORIGINS=["https://your-frontend-domain.vercel.app"]
+```
+
+### Frontend
+```env
+BACKEND_URL=https://your-backend-domain.vercel.app
+```
+
+## Files Relevant To Deployment
+- `backend/api/index.py`
+- `backend/vercel.json`
+- `backend/.env.example`
+- `backend/app/main.py`
+- `backend/app/db/session.py`
+- `backend/app/core/config.py`
+- `frontend/next.config.js`
+- `frontend/.env.example`
+- `frontend/app/practice/page.tsx`
+
+## What To Test After Deploy
+- Frontend loads on the Vercel domain
+- Backend `/health` returns 200
+- Login works
+- Protected routes redirect correctly
+- Practice API requests reach the backend through `/api/v1/...`
+- Backend can connect to Postgres
+- Backend can connect to Redis if configured
+- Judge0 submission flow works against your external Judge0 service
