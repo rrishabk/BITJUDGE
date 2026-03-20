@@ -1,4 +1,4 @@
-# BITJUDGE
+# BITJUDGE by rrishabk
 
 BITJUDGE is a monorepo with a Next.js frontend and a FastAPI backend.
 
