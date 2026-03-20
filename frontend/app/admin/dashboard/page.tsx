@@ -9,7 +9,7 @@ export default function AdminDashboardPage() {
         <h1 className="mt-2 text-4xl font-black">Quiz operations and platform analytics</h1>
       </div>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card><p className="text-sm text-zinc-500">Registered Students</p><p className="mt-2 text-4xl font-bold">{adminStats.students}</p></Card>
+        <Card><p className="text-sm text-zinc-500">Registered Students</p><p className="mt-2 text-4xl font-bold">{adminStats.totalUsers}</p></Card>
         <Card><p className="text-sm text-zinc-500">Active Users</p><p className="mt-2 text-4xl font-bold">{adminStats.activeUsers}</p></Card>
         <Card><p className="text-sm text-zinc-500">Live Participants</p><p className="mt-2 text-4xl font-bold">{adminStats.liveQuizParticipants}</p></Card>
         <Card><p className="text-sm text-zinc-500">Completion Rate</p><p className="mt-2 text-4xl font-bold">{adminStats.completionRate}%</p></Card>
