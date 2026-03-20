@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +38,29 @@ class Settings(BaseSettings):
     page_size_max: int = 100
     rate_limit_requests: int = 120
     rate_limit_window_seconds: int = 60
+
+    @field_validator("database_url", "redis_url", mode="before")
+    @classmethod
+    def empty_strings_to_none(cls, value: str | None) -> str | None:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            raw = value.strip()
+            if not raw:
+                return []
+            if raw.startswith("[") and raw.endswith("]"):
+                import json
+
+                return json.loads(raw)
+            return [item.strip() for item in raw.split(",") if item.strip()]
+        return ["http://localhost:3000"]
 
     @property
     def sqlalchemy_database_uri(self) -> str:
